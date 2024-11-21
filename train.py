@@ -30,8 +30,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.cuda.empty_cache()
 torch.autograd.set_detect_anomaly(True)
 
-DATA_DIR = './data' # '/media/mike/Elements/data'
-N_FRAMES = 3
+#DATA_DIR = './data' # '/media/mike/Elements/data'
+DATA_DIR = '/media/laurence/Elements/Data'
+N_FRAMES = 1
 WARPED_CROPPED_IMG_SIZE = (250, 350)
 
 # Get the tree of all video files from a directory in place
@@ -113,26 +114,57 @@ class CustomDataset(Dataset):
         folders = self.input_paths[idx].split('/')
         object_name = folders[folders.index(self.training_data_folder) + 1]
 
+        file_idx = idx // 3
+        indent = idx % 3
+
         # Read and store frames in the tensor
-        with open(self.input_paths[idx], 'rb') as file:
-            if self.img_style == 'depth':
-                self.x_frames[:] = torch.from_numpy(pickle.load(file).astype(np.float32)).unsqueeze(3).permute(0, 3, 1, 2)
-                self.x_frames /= self.normalization_values['max_depth']
-            else:
-                self.x_frames[:] = torch.from_numpy(pickle.load(file).astype(np.float32)).permute(0, 3, 1, 2)
+        with open(self.input_paths[file_idx], 'rb') as file:
+            #self.x_frames[:] = torch.from_numpy(pickle.load(file).astype(np.float32))
+            #data = pickle.load(file)  # Load data
+            #tensor_list = [torch.from_numpy(item.astype(np.float32)) for item in data]
+            #stacked_tensor = torch.stack(tensor_list,dim=0)
+            #print(self.x_frames.shape)
+            #if self.img_style == 'depth':
+            #    stacked_tensors = stacked_tensor.unsqueeze(3).permute(0, 3, 1, 2)
+            #    self.x_frames[:] = stacked_tensors[:1]
+            #    self.x_frames /= self.normalization_values['max_depth']
+            #else:
+            #    stacked_tensors = stacked_tensor.permute(0, 3, 1, 2)
+            #    self.x_frames[:] = stacked_tensors[:1]
+            data = pickle.load(file).astype(np.float32)  # Load data as numpy array
+        selected_image = data[indent]
+
+        # Process depending on image style
+        if self.img_style == 'depth':
+            # For depth images (single channel), add channel dimension and reorder
+            img_tensor = torch.from_numpy(selected_image).unsqueeze(2).permute(2, 0, 1)  # [N, 1, H, W]
+            img_tensor /= self.normalization_values['max_depth']
+        else:
+            # For RGB images, reorder dimensions
+            img_tensor = torch.from_numpy(selected_image).permute(2, 0, 1)  # [N, 3, H, W]
+        
+        self.x_frames[:] = img_tensor.unsqueeze(0)
+        #print(f"Final tensor shape: {self.x_frames[:].shape}")
 
         # Unpack force measurements
-        self.base_name = os.path.dirname(self.input_paths[idx])
+        self.base_name = os.path.dirname(self.input_paths[file_idx])
         if self.use_force:
             with open(self.base_name + '/forces.pkl', 'rb') as file:
-                self.x_forces[:] = torch.from_numpy(pickle.load(file).astype(np.float32)).unsqueeze(1)
-                self.x_forces /= self.normalization_values['max_force']
-
+                data = pickle.load(file).astype(np.float32)
+            selected_force = data[indent]
+            self.x_forces[:] = torch.tensor(selected_force,dtype=torch.float32).unsqueeze(0).unsqueeze(1)
+            #self.x_forces[:] = torch.from_numpy(pickle.load(file).astype(np.float32)).unsqueeze(1)
+            self.x_forces[:] /= self.normalization_values['max_force']
+            #print(f"Final tensor shape: {self.x_forces[:].shape}")
+        
         # Unpack gripper width measurements
         if self.use_width:
             with open(self.base_name + '/widths.pkl', 'rb') as file:
-                self.x_widths[:] = torch.from_numpy(pickle.load(file).astype(np.float32)).unsqueeze(1)
-                self.x_widths[:] /= self.normalization_values['max_width']
+                data = pickle.load(file).astype(np.float32)
+            selected_width = data[indent]
+            self.x_widths[:] = torch.tensor(selected_width,dtype=torch.float32).unsqueeze(0).unsqueeze(1)
+            #self.x_widths[:] = torch.from_numpy(pickle.load(file).astype(np.float32)).unsqueeze(1)
+            self.x_widths[:] /= self.normalization_values['max_width']
 
             if self.use_width_transforms:
                 if self.noise_width[idx]:
@@ -1031,11 +1063,13 @@ if __name__ == "__main__":
 
         # Logging on/off
         'use_wandb': True,                      # Report data to Weights & Biases
-        'run_name': 'test_run',                 # Name of W&B run
+        'run_name': 'test_run_1frame',                 # Name of W&B run
 
         # Training and model parameters
-        'epochs'                : 80,
-        'batch_size'            : 32,
+        #'epochs'                : 80,
+        'epochs'                : 10,
+        #'batch_size'            : 32,
+        'batch_size'            : 96,
         'img_feature_size'      : 128,
         'fwe_feature_size'      : 32,
         'val_pct'               : 0.175,
