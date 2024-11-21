@@ -66,7 +66,6 @@ class GraspData():
 
 
     def get_latest_data(self,last_n_frames=None):
-        #print((self.wedge_video.diff_images()).shape)
         with shared_lock:
             diff_images = self.wedge_video.diff_images(last_n_frames)
             depth_images = self.wedge_video.depth_images(last_n_frames)

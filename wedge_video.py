@@ -112,7 +112,7 @@ class GelSightWedgeVideo():
     def warped_RGB_frames(self,last_n_frames=None):
         if last_n_frames:
             self._warped_rgb_frames = []
-            for img in self._last_frames:
+            for img in self.raw_RGB_frames(last_n_frames):
                 self._warped_rgb_frames.append(self.crop_image(self.warp_image(img)))
         else:
             if len(self._warped_rgb_frames) != len(self._raw_rgb_frames):

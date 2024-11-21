@@ -548,7 +548,6 @@ class ModulusModel():
         # Apply random transformations for training
         if self.use_transformations:
             x_frames = self.random_transformer(x_frames) # Apply V/H flips
-        
         x_frames = x_frames.view(batch_size, self.n_frames, self.n_channels, self.img_size[0], self.img_size[1])
 
         # Concatenate features across frames into a single vector
@@ -559,11 +558,11 @@ class ModulusModel():
 
         # Execute FC layers on other data and append
         if self.use_force: # Force measurements
-            #features.append(self.force_encoder(x_forces[:, :, :].squeeze(-1)))
-            features.append(self.force_encoder(x_forces.squeeze(-1)))
+            #features.append(self.force_encoder(x_forces.squeeze(-1)))
+            features.append(self.force_encoder(x_forces))
         if self.use_width: # Width measurements
-            #features.append(self.width_encoder(x_widths[:, :, :].squeeze(-1)))
-            features.append(self.width_encoder(x_widths.squeeze(-1)))
+            #features.append(self.width_encoder(x_widths.squeeze(-1)))
+            features.append(self.width_encoder(x_widths))
 
         # Send aggregated features to the FC decoder
         features = torch.cat(features, -1)
@@ -799,7 +798,6 @@ class ModulusModel():
         return
 
     def thread_estimate(self,grasp_data=None,E_hat_simple=None,E_hat_hertz=None,plot_results=False):
-        n_frames_estim = 3
         if(grasp_data is None):
             grasp_data = GraspData()
         if plot_results:
@@ -821,8 +819,8 @@ class ModulusModel():
         while self._estimation:
             start_time = time.time()
 
-            tactile_frames,sampled_depth, sampled_forces,sampled_widths = grasp_data.get_latest_data(n_frames_estim)
-            
+            tactile_frames,sampled_depth, sampled_forces,sampled_widths = grasp_data.get_latest_data(N_FRAMES)
+
             E_hat = self.estimate(tactile_frames, forces=sampled_forces, widths=sampled_widths, E_hat_simple=E_hat_simple, E_hat_hertz=E_hat_hertz).item()
             print(f"Learned estimate of Young's Modulus... {E_hat:.3e} Pa")
 
@@ -870,7 +868,7 @@ class ModulusModel():
             estimations[1] = E_hat_hertz
             estimations = estimations.unsqueeze(0)
 
-
+        
         # Convert to tensor
         if isinstance(tactile_frames, np.ndarray):
             tactile_frames = torch.tensor(tactile_frames.astype(np.float32), device=self.device)
@@ -1063,7 +1061,7 @@ if __name__ == "__main__":
 
         # Logging on/off
         'use_wandb': True,                      # Report data to Weights & Biases
-        'run_name': 'test_run_1frame',                 # Name of W&B run
+        'run_name': 'test_run_1frame_estim',                 # Name of W&B run
 
         # Training and model parameters
         #'epochs'                : 80,

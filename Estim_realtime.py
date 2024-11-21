@@ -12,7 +12,7 @@ from analytical_estimate import EstimateModulus
 from train import ModulusModel, N_FRAMES
 
 # Load model
-path_to_model = './model/full_dataset' # './model/rubber_only'
+path_to_model = './model/test_run_1frame_estim' # './model/rubber_only'
 with open(f'{path_to_model}/config.json', 'r') as file:
     config = json.load(file)
 config['use_wandb'] = False
