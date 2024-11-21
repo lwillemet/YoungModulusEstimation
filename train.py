@@ -1052,7 +1052,7 @@ if __name__ == "__main__":
         'use_markers': False,                   # Use tactile images from sensor with markers
         'use_force': True,                      # Use grasping force measurements as an input
         'use_width': True,                      # Use grasping width measurements as an input
-        'use_estimations': False,               # Use analytical estimations as an input
+        'use_estimations': True,               # Use analytical estimations as an input
         'use_transformations': False,           # Transform images during training
         'use_width_transforms': True,           # Transform width measurements during training
         'exclude': [
